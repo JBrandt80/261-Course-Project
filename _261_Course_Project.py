@@ -64,6 +64,7 @@ def display_employee_details(name, hours_worked, hourly_rate, gross_pay, tax_rat
     print(f"Gross Pay: ${gross_pay:.2f}")
     print(f"Income Tax Rate: {tax_rate:.2f}")
     print(f"Income Taxes: ${income_taxes:.2f}")
+    print(f"Net Pay: ${net_pay:.2f}")
     print("---------------------------------")
 
 def display_summary(total_employees, total_hours, total_gross_pay, total_income_taxes, total_net_pay):
