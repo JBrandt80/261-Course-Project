@@ -1,6 +1,6 @@
 # Jeffrey Brandt
 # CIS261
-# Course Project Phase 2 - Using Lists and Dictionaries to Store and Retrieve Data
+# Course Project Phase 3 - Using Files to Store and Retrieve Data
  
 hourly_rate = 21.00
 
@@ -20,7 +20,9 @@ employee_data = [
 
 from datetime import datetime
 
-# Function to input and validate dates
+def clear_file(filename):
+    open(filename, "w").close()
+
 def input_dates():
     while True:
         try:
@@ -35,31 +37,21 @@ def input_dates():
         except ValueError:
             print("Invalid date format. Please use mm/dd/yyyy.")
 
-def input_employee_data():
-    from_date, to_date = input_dates()
-    name = input("Enter employee name: ")
-    hours_worked = float(input("Enter hours worked: "))
-    hourly_rate = float(input("Enter hourly rate: "))
-    tax_rate = float(input("Enter income tax rate (e.g., 0.20 for 20%): "))
-    return {
-        "from_date": from_date,
-        "to_date": to_date,
-        "name": name,
-        "hours_worked": hours_worked,
-        "hourly_rate": hourly_rate,
-        "tax_rate": tax_rate
-    }
+def write_to_file(filename, from_date, to_date, name, hours, rate, tax):
+    with open(filename, "a") as file:
+        record = f"{from_date}|{to_date}|{name}|{hours}|{rate}|{tax}\n"
+        file.write(record)
 
-def calculate_payroll(employee):
-    gross_pay = employee["hours_worked"] * employee["hourly_rate"]
-    income_taxes = gross_pay * employee["tax_rate"]
-    net_pay = gross_pay - income_taxes
-    employee["gross_pay"] = gross_pay
-    employee["income_taxes"] = income_taxes
-    employee["net_pay"] = net_pay
+def read_and_process_file(filename="employee_data.txt"):
+    from_date_filter = input("Enter FROM date to filter (mm/dd/yyyy) or 'All':").strip()
+    if from_date_filter.lower() != "all":
+        try:
+            datetime.strptime(from_date_filter, "%m/%d/%Y")
+        except ValueError:
+            print("Invalid date format.")
+            return
 
-def process_employee_data(employee_records):
-    summary_data = {
+    summary = {
         "total_employees": 0,
         "total_hours": 0.0,
         "total_income_taxes": 0.0,
@@ -67,49 +59,76 @@ def process_employee_data(employee_records):
         "total_gross_pay": 0.0
     }
 
-    for emp in employee_records:
-        calculate_payroll(emp)
-        print("\n--- Employee Payroll ---")
-        print(f"From Date: {emp['from_date']}")
-        print(f"To Date: {emp['to_date']}")
-        print(f"Name: {emp['name']}")
-        print(f"Hours Worked: {emp['hours_worked']}")
-        print(f"Hourly Rate: ${emp['hourly_rate']:.2f}")
-        print(f"Gross Pay: ${emp['gross_pay']:.2f}")
-        print(f"Income Tax Rate: {emp['tax_rate']:.2f}")
-        print(f"Income Taxes: ${emp['income_taxes']:.2f}")
-        print(f"Net Pay: ${emp['net_pay']:.2f}")
-        print("---------------------------------")
+    try:
+        with open(filename, "r") as file:
+            for line in file:
+                fields = line.strip().split("|")
+                if len(fields) != 6:
+                    continue
+                
+                from_date, to_date, name, hours, rate, tax = fields
+                if from_date_filter.lower() != "all" and from_date != from_date_filter:
+                    continue
+                   
+                hours = float(hours)
+                rate = float(rate)
+                tax = float(tax)
+                gross = hours * rate
+                income_tax = gross * tax
+                net = gross - income_tax
 
-        summary_data["total_employees"] += 1
-        summary_data["total_hours"] += emp["hours_worked"]
-        summary_data["total_income_taxes"] += emp["income_taxes"]
-        summary_data["total_net_pay"] += emp["net_pay"]
-        summary_data["total_gross_pay"] += emp["gross_pay"]
+                print("\n--- Employee Payroll ---")
+                print(f"From Date: {from_date}")
+                print(f"To Date: {to_date}")
+                print(f"Name: {name}")
+                print(f"Hours Worked: {hours}")
+                print(f"Hourly Rate: ${rate:.2f}")
+                print(f"Gross Pay: ${gross:.2f}")
+                print(f"Income Tax Rate: {tax:.2f}")
+                print(f"Income Taxes: ${income_tax:.2f}")
+                print(f"Net Pay: ${net:.2f}")
+                print("---------------------------------")
 
-    return summary_data
+                summary["total_employees"] += 1
+                summary["total_hours"] += hours
+                summary["total_income_taxes"] += income_tax
+                summary["total_net_pay"] += net
+                summary["total_gross_pay"] += gross
+    except FileNotFoundError:
+        print("No data file found.")
 
-def display_summary_from_dict(summary_data):
+    display_summary(summary)
+
+def display_summary(summary):
     print("\n--- Payroll Summary ---")
-    print(f"Total Employees: {summary_data['total_employees']}")
-    print(f"Total Hours Worked: {summary_data['total_hours']}")
-    print(f"Total Gross Pay: ${summary_data['total_gross_pay']:.2f}")
-    print(f"Total Income Taxes: ${summary_data['total_income_taxes']:.2f}")
-    print(f"Total Net Pay: ${summary_data['total_net_pay']:.2f}")
+    print(f"Total Employees: {summary['total_employees']}")
+    print(f"Total Hours Worked: {summary['total_hours']}")
+    print(f"Total Gross Pay: ${summary['total_gross_pay']:.2f}")
+    print(f"Total Income Taxes: ${summary['total_income_taxes']:.2f}")
+    print(f"Total Net Pay: ${summary['total_net_pay']:.2f}")
     print("-----------------------------------")
 
 def main():
-    employee_records = []
+    filename = "employee_data.txt"
+    mode = input("Start fresh or append to existing data? (fresh/append): ").strip().lower()
+    if mode == "fresh":
+        clear_file(filename)
+
     while True:
-        emp_data = input_employee_data()
-        if emp_data:
-            employee_records.append(emp_data)
+        from_date = input("Enter From Date (mm/dd/yyyy): ")
+        to_date = input("Enter To Date (mm/dd/yyyy): ")
+        name = input("Enter employee Name: ")
+        hours = float(input("Enter Hours Worked: "))
+        rate = float(input("Enter Hourly Rate: "))
+        tax = float(input("Enter Income Tax Rate (e.g., 0.20 for 20%): "))
+
+        write_to_file(filename, from_date, to_date, name, hours, rate, tax)
+
         cont = input("Add another employee? (yes/no): ").strip().lower()
         if cont != "yes":
             break
-
-    summary = process_employee_data(employee_records)
-    display_summary_from_dict(summary)
+   
+    read_and_process_file(filename)
 
 if __name__ == "__main__":
     main()
