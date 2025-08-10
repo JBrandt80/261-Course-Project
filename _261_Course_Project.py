@@ -1,6 +1,6 @@
 # Jeffrey Brandt
 # CIS261
-# Course Project Phase 2 - Usin Lists and Dictionaries to Store and Retrieve Data
+# Course Project Phase 2 - Using Lists and Dictionaries to Store and Retrieve Data
  
 hourly_rate = 21.00
 
