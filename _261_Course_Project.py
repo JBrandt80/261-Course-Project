@@ -1,6 +1,6 @@
 # Jeffrey Brandt
 # CIS261
-# Course Project Phase 3 - Using Files to Store and Retrieve Data
+# Course Project Phase 4 - Added Basic Security to the Application
  
 hourly_rate = 21.00
 
@@ -19,6 +19,73 @@ employee_data = [
 ]
 
 from datetime import datetime
+
+#--- Login Class ---
+
+class Login:
+    def __init__(self, user_id, password, authorization):
+        self.user_id = user_id
+        self.password = password
+        self.authorization = authorization
+
+#--- User Management ---
+
+def load_user_ids(filename):
+    user_ids = []
+    try:
+        with open(filename, "a+") as file:
+            file.seek(0)
+            for line in file:
+                fields = line.strip().split("|")
+                if len(fields) == 3:
+                    user_ids.append(fields[0])
+    except FileNotFoundError:
+        pass
+    return user_ids
+
+def collect_user_data(filename, user_ids):
+    print("\n--- User Setup ---")
+    while True:
+        user_id = input("Enter User ID (or 'End' to finish): ").strip()
+        if user_id.lower() == "end":
+            break
+        if user_id in user_ids:
+            print("User ID already exists.")
+            continue
+        password = input("Enter Password: ").strip()
+        auth_code = input("Enter Authorization Code (admin/User): ").strip().capitalize()
+        if auth_code not in ["Admin", "User"]:
+            print("Invalid authorization code.")
+            continue
+        with open(filename, "a") as file:
+            file.write(f"{user_id}|{password}|{auth_code}\n")
+        user_ids.append(user_id)
+
+def login_process(filename):
+    users = {}
+    try:
+        with open(filename, "r") as file:
+            for line in file:
+                user_id, password, auth_code = line.strip().split("|")
+                users[user_id] = (password, auth_code)
+    except FileNotFoundError:
+        print("Login file not found.")
+        return None
+    print("\n--- Login ---")
+    user_id = input("Enter User ID: ").strip()
+    password = input("Enter Password: ").strip()
+
+    if user_id not in users:
+        print("User ID not found.")
+        return None
+    stored_password, auth_code = users[user_id]
+    if password != stored_password:
+        print("Incorrect password.")
+        return None
+
+    return Login(user_id, password, auth_code)
+
+#--- Payroll Functions ---
 
 def clear_file(filename):
     open(filename, "w").close()
@@ -42,7 +109,7 @@ def write_to_file(filename, from_date, to_date, name, hours, rate, tax):
         record = f"{from_date}|{to_date}|{name}|{hours}|{rate}|{tax}\n"
         file.write(record)
 
-def read_and_process_file(filename="employee_data.txt"):
+def read_and_process_file(payroll_file, login_obj=None):
     from_date_filter = input("Enter FROM date to filter (mm/dd/yyyy) or 'All':").strip()
     if from_date_filter.lower() != "all":
         try:
@@ -60,7 +127,7 @@ def read_and_process_file(filename="employee_data.txt"):
     }
 
     try:
-        with open(filename, "r") as file:
+        with open(payroll_file, "r") as file:
             for line in file:
                 fields = line.strip().split("|")
                 if len(fields) != 6:
@@ -97,10 +164,13 @@ def read_and_process_file(filename="employee_data.txt"):
     except FileNotFoundError:
         print("No data file found.")
 
-    display_summary(summary)
+    display_summary(summary, login_obj)
 
-def display_summary(summary):
+def display_summary(summary, login_obj):
     print("\n--- Payroll Summary ---")
+    print(f"User ID: {login_obj.user_id}")
+    print(f"Password: {login_obj.password}")
+    print(f"Authorization: {login_obj.authorization}")
     print(f"Total Employees: {summary['total_employees']}")
     print(f"Total Hours Worked: {summary['total_hours']}")
     print(f"Total Gross Pay: ${summary['total_gross_pay']:.2f}")
@@ -108,11 +178,26 @@ def display_summary(summary):
     print(f"Total Net Pay: ${summary['total_net_pay']:.2f}")
     print("-----------------------------------")
 
+#--- Main Program ---
+
 def main():
-    filename = "employee_data.txt"
-    mode = input("Start fresh or append to existing data? (fresh/append): ").strip().lower()
-    if mode == "fresh":
-        clear_file(filename)
+    user_file = "user_login.txt"
+    payroll_file = "employee_data.txt"
+
+    user_ids = load_user_ids(user_file)
+    collect_user_data(user_file, user_ids)
+
+    user = login_process(user_file)
+    if not user:
+        return
+
+    print(f"\nWelcome {user.user_id} | Role: {user.authorization}")
+
+    if user.authorization == "Admin":
+        mode = input("Start fresh or append to existing data? (fresh/append): ").strip().lower()
+        if mode == "fresh":
+            open(payroll_file, "w").close()
+        
 
     while True:
         from_date = input("Enter From Date (mm/dd/yyyy): ")
@@ -122,13 +207,13 @@ def main():
         rate = float(input("Enter Hourly Rate: "))
         tax = float(input("Enter Income Tax Rate (e.g., 0.20 for 20%): "))
 
-        write_to_file(filename, from_date, to_date, name, hours, rate, tax)
+        write_to_file(payroll_file, from_date, to_date, name, hours, rate, tax)
 
         cont = input("Add another employee? (yes/no): ").strip().lower()
         if cont != "yes":
             break
    
-    read_and_process_file(filename)
+    read_and_process_file(payroll_file, user)
 
 if __name__ == "__main__":
     main()
